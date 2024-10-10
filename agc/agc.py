@@ -83,7 +83,25 @@ def read_fasta(amplicon_file: Path, minseqlen: int) -> Iterator[str]:
     :param minseqlen: (int) Minimum amplicon sequence length
     :return: A generator object that provides the Fasta sequences (str).
     """
-    pass
+    seq = ""
+    is_seq = True
+    with gzip.open(amplicon_file, "r") as f:
+        for line in f:
+            # Restart sequence after passing the '>' line
+            if not is_seq:
+                seq = ""
+            is_seq = True
+            # If '>' line
+            if line.startswith(b">"):
+                is_seq = False
+                if len(seq) >= minseqlen:
+                    yield seq
+            # If seqence line, add it to the sequence
+            if is_seq:
+                seq += line.decode().strip()
+    # Add the last sequence (not followed by '>')
+    if len(seq) >= minseqlen:
+        yield seq
 
 
 def dereplication_fulllength(amplicon_file: Path, minseqlen: int, mincount: int) -> Iterator[List]:
@@ -94,7 +112,21 @@ def dereplication_fulllength(amplicon_file: Path, minseqlen: int, mincount: int)
     :param mincount: (int) Minimum amplicon count
     :return: A generator object that provides a (list)[sequences, count] of sequence with a count >= mincount and a length >= minseqlen.
     """
-    pass
+    seq_dict = {}
+    # Generate dictionnary with sequence count
+    for seq in read_fasta(amplicon_file, minseqlen):
+        if seq not in seq_dict:
+            seq_dict[seq] = 1
+        else:
+            seq_dict[seq] += 1
+    # Sort dict by count
+    seq_list = sorted(seq_dict.items(), key=lambda x: x[1], reverse=True)
+    # Yield values
+    for item in seq_list:
+        if item[1] < mincount:
+            break
+        yield list(item)
+
 
 def get_identity(alignment_list: List[str]) -> float:
     """Compute the identity rate between two sequences
@@ -138,8 +170,13 @@ def main(): # pragma: no cover
     args = get_arguments()
     amplicon_file = args.amplicon_file
     output_file = args.output_file
-    minseqlen = args.minseqlen
-    mincount = args.mincount
+    min_seq_len = args.minseqlen
+    min_count = args.mincount
+
+    # Read fasta file
+    print(len(list(read_fasta(amplicon_file, min_seq_len))))
+    print(len(list(dereplication_fulllength(amplicon_file, min_seq_len, min_count))))
+    
     
 
 

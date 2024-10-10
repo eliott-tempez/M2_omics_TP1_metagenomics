@@ -136,7 +136,11 @@ def main(): # pragma: no cover
     """
     # Get arguments
     args = get_arguments()
-    # Votre programme ici
+    amplicon_file = args.amplicon_file
+    output_file = args.output_file
+    minseqlen = args.minseqlen
+    mincount = args.mincount
+    
 
 
 

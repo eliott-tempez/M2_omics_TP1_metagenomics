@@ -134,7 +134,15 @@ def get_identity(alignment_list: List[str]) -> float:
     :param alignment_list:  (list) A list of aligned sequences in the format ["SE-QUENCE1", "SE-QUENCE2"]
     :return: (float) The rate of identity between the two sequences.
     """
-    pass
+    match = 0
+    seq_1 = alignment_list[0]
+    seq_2 = alignment_list[1]
+    len_seq = len(seq_1)
+    for i_nucl in range(len_seq):
+        if seq_1[i_nucl] == seq_2[i_nucl] and seq_1[i_nucl] != "-":
+            match += 1
+    return ((match / len_seq) * 100)
+
 
 def abundance_greedy_clustering(amplicon_file: Path, minseqlen: int, mincount: int, chunk_size: int, kmer_size: int) -> List:
     """Compute an abundance greedy clustering regarding sequence count and identity.
@@ -147,7 +155,15 @@ def abundance_greedy_clustering(amplicon_file: Path, minseqlen: int, mincount: i
     :param kmer_size: (int) A fournir mais non utilise cette annee
     :return: (list) A list of all the [OTU (str), count (int)] .
     """
-    pass
+    seq_list = list(dereplication_fulllength(amplicon_file, minseqlen, mincount))
+    for i in range(len(seq_list)):
+        for j in range(i, len(seq_list)):
+            most_occ_seq = seq_list[i][0]
+            most_occ = seq_list[i][1]
+            less_occ_seq = seq_list[j][0]
+            less_occ = seq_list[j][1]
+            alignment = nw.global_align(most_occ_seq, less_occ_seq, gap_open=-1, gap_extend=-1, matrix=str(Path(__file__).parent / "MATCH"))
+            identity = get_identity(alignment)
 
 
 def write_OTU(OTU_list: List, output_file: Path) -> None:
@@ -173,10 +189,8 @@ def main(): # pragma: no cover
     min_seq_len = args.minseqlen
     min_count = args.mincount
 
-    # Read fasta file
-    print(len(list(read_fasta(amplicon_file, min_seq_len))))
-    print(len(list(dereplication_fulllength(amplicon_file, min_seq_len, min_count))))
-    
+    # Cluster
+    abundance_greedy_clustering(amplicon_file, min_seq_len, min_count, 0, 0)
     
 
 

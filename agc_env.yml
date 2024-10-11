@@ -1,4 +1,4 @@
-name: abundance-greedy-clustering
+name: agc
 channels:
   - nodefaults
   - conda-forge

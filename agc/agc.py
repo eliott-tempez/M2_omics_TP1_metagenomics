@@ -155,16 +155,31 @@ def abundance_greedy_clustering(amplicon_file: Path, minseqlen: int, mincount: i
     :param kmer_size: (int) A fournir mais non utilise cette annee
     :return: (list) A list of all the [OTU (str), count (int)] .
     """
-    seq_list = list(dereplication_fulllength(amplicon_file, minseqlen, mincount))
-    for i in range(len(seq_list)):
-        for j in range(i, len(seq_list)):
-            most_occ_seq = seq_list[i][0]
-            most_occ = seq_list[i][1]
-            less_occ_seq = seq_list[j][0]
-            less_occ = seq_list[j][1]
-            alignment = nw.global_align(most_occ_seq, less_occ_seq, gap_open=-1, gap_extend=-1, matrix=str(Path(__file__).parent / "MATCH"))
-            identity = get_identity(alignment)
+    otus = []
+    for item_seq in dereplication_fulllength(amplicon_file, minseqlen, mincount):
+        # Add first OTU
+        if not otus:
+            otus.append(item_seq)
+            continue
 
+        is_new_otu = True
+        for item_otu in otus:
+            # Calculate identity for each OTU
+            current_seq = item_seq[0]
+            current_count = item_seq[1]
+            otu_seq = item_otu[0]
+            alignment = nw.global_align(current_seq, otu_seq, gap_open=-1, gap_extend=-1, matrix=str(Path(__file__).parent / "MATCH"))
+            identity = get_identity(alignment)
+            # If identity > 97, merge with existing OTU
+            if identity > 97:
+                item_otu[1] += current_count
+                is_new_otu = False
+                break
+        # If it's a new OTU, append it to the list
+        if is_new_otu:
+            otus.append(item_seq)
+    return otus
+                
 
 def write_OTU(OTU_list: List, output_file: Path) -> None:
     """Write the OTU sequence in fasta format.
@@ -172,7 +187,10 @@ def write_OTU(OTU_list: List, output_file: Path) -> None:
     :param OTU_list: (list) A list of OTU sequences
     :param output_file: (Path) Path to the output file
     """
-    pass
+    with open(output_file, "w", encoding="utf-8") as f:
+        for i in range(len(OTU_list)):
+            f.write(f"OTU_{i + 1} occurrence:{OTU_list[i][1]}\n")
+            f.write(f"{textwrap.fill(OTU_list[i][0], 80)}\n")
 
 
 #==============================================================
@@ -190,7 +208,8 @@ def main(): # pragma: no cover
     min_count = args.mincount
 
     # Cluster
-    abundance_greedy_clustering(amplicon_file, min_seq_len, min_count, 0, 0)
+    otus = abundance_greedy_clustering(amplicon_file, min_seq_len, min_count, 0, 0)
+    write_OTU(otus, output_file)
     
 
 

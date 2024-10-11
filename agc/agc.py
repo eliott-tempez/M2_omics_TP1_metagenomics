@@ -65,7 +65,7 @@ def get_arguments(): # pragma: no cover
     parser = argparse.ArgumentParser(description=__doc__, usage=
                                      "{0} -h"
                                      .format(sys.argv[0]))
-    parser.add_argument('-i', '-amplicon_file', dest='amplicon_file', type=isfile, required=True, 
+    parser.add_argument('-i', '-amplicon_file', dest='amplicon_file', type=isfile, required=True,
                         help="Amplicon is a compressed fasta file (.fasta.gz)")
     parser.add_argument('-s', '-minseqlen', dest='minseqlen', type=int, default = 400,
                         help="Minimum sequence length for dereplication (default 400)")
@@ -141,7 +141,7 @@ def get_identity(alignment_list: List[str]) -> float:
     for i_nucl in range(len_seq):
         if seq_1[i_nucl] == seq_2[i_nucl] and seq_1[i_nucl] != "-":
             match += 1
-    return ((match / len_seq) * 100)
+    return (match / len_seq) * 100
 
 
 def abundance_greedy_clustering(amplicon_file: Path, minseqlen: int, mincount: int, chunk_size: int, kmer_size: int) -> List:
@@ -168,7 +168,9 @@ def abundance_greedy_clustering(amplicon_file: Path, minseqlen: int, mincount: i
             current_seq = item_seq[0]
             current_count = item_seq[1]
             otu_seq = item_otu[0]
-            alignment = nw.global_align(current_seq, otu_seq, gap_open=-1, gap_extend=-1, matrix=str(Path(__file__).parent / "MATCH"))
+            alignment = nw.global_align(current_seq, otu_seq, gap_open=-1,
+                                        gap_extend=-1,
+                                        matrix=str(Path(__file__).parent / "MATCH"))
             identity = get_identity(alignment)
             # If identity > 97, merge with existing OTU
             if identity > 97:
@@ -179,7 +181,7 @@ def abundance_greedy_clustering(amplicon_file: Path, minseqlen: int, mincount: i
         if is_new_otu:
             otus.append(item_seq)
     return otus
-                
+
 
 def write_OTU(OTU_list: List, output_file: Path) -> None:
     """Write the OTU sequence in fasta format.
@@ -189,7 +191,7 @@ def write_OTU(OTU_list: List, output_file: Path) -> None:
     """
     with open(output_file, "w", encoding="utf-8") as f:
         for i in range(len(OTU_list)):
-            f.write(f"OTU_{i + 1} occurrence:{OTU_list[i][1]}\n")
+            f.write(f">OTU_{i + 1} occurrence:{OTU_list[i][1]}\n")
             f.write(f"{textwrap.fill(OTU_list[i][0], 80)}\n")
 
 
@@ -206,12 +208,10 @@ def main(): # pragma: no cover
     output_file = args.output_file
     min_seq_len = args.minseqlen
     min_count = args.mincount
-
-    # Cluster
+    # Cluster and extract OTUs
     otus = abundance_greedy_clustering(amplicon_file, min_seq_len, min_count, 0, 0)
+    # Save OTUS
     write_OTU(otus, output_file)
-    
-
 
 
 if __name__ == '__main__':
